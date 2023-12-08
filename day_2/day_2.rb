@@ -56,4 +56,27 @@ class ValidateGames
     end
     id_sum
   end
+
+  def power_sum
+    power_sum = 0
+    games_input.each do |game|
+      this_game = Game.new(data: game)
+      rounds = game.split(':')[1].split(';')
+      red_seen, green_seen, blue_seen, power = 0,0,0,0
+      rounds.each do |round|
+        init_values = round.split(',')
+        red, green, blue = 0,0,0
+        init_values.each do |value|
+          red = value.delete("^0-9").to_i if value.include?(RED)
+          green = value.delete("^0-9").to_i if value.include?(GREEN)
+          blue = value.delete("^0-9").to_i if value.include?(BLUE)
+          red_seen = red if red.present? && red_seen < red
+          green_seen = green if green.present? && green_seen < green
+          blue_seen = blue if blue.present? && blue_seen < blue
+        end
+      end
+      power_sum += (red_seen * green_seen * blue_seen)
+    end
+    power_sum
+  end
 end
