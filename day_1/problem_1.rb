@@ -16,10 +16,16 @@ class Calibration
   end
 
   def replace_pseudo_values(line: )
-    substitutions = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9}.with_indifferent_access
+    # the trick here is string substitution solutions get wrecked by input like twone which if you sub the number for the pseudo number
+    # gets you 2ne which calibrates to 22 when it should calibrate to 21. Trying to force people into find the index of the match and insert the number leaving the existing text alone
+    # well i'm going to sub 2two for two so left pass on twone gives me 2twone and then last match gives me 2tw1one which then cleans to 21 after removing non digits
+    # what I'm trying to say is Eric Wastl is a bad man
+    substitutions = {'one': '1one', 'two': '2two', 'three': '3three', 'four': '4four', 'five': '5five', 'six': '6six', 'seven': '7seven', 'eight': '8eight', 'nine': '9nine'}.with_indifferent_access
     regex = Regexp.union(substitutions.keys)
-    converted_line = line.gsub(regex, substitutions)
-    calibration_value(line: converted_line)
+    first_match_replaced = line.sub(regex, substitutions)
+    last_match_regex = Regexp.union(/.*\K#{regex}/)
+    last_match_replaced = first_match_replaced.gsub(last_match_regex, substitutions)
+    calibration_value(line: last_match_replaced)
   end
 
   def calculate
