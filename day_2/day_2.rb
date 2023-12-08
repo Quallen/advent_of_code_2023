@@ -1,20 +1,63 @@
 require 'active_support/all'
 
-class ValidateGames
+class Games
   RED = 'red'
   GREEN = 'green'
   BLUE = 'blue'
-  attr_accessor :games_input
+  attr_accessor :games_input, :games
 
   def initialize
     @games_input = File.read('day_2_input.txt').lines.map(&:chomp)
+    @games = []
+    games_input.each do |game|
+      games << Game.new(data: game)
+    end
+  end
+
+  def sum_valid_game_ids
+    games.select{|game| game.valid?}.collect{|game| game.id}.reduce(:+)
+  end
+
+  def power_sum
+    games.collect{|game| game.power}.reduce(:+)
   end
 
   class Game
-    attr_accessor :game_id
+    attr_accessor :id, :data, :rounds
     def initialize(data: )
       @data = data
-      @game_id = data.split(':').first.delete("^0-9").to_i
+      @id = data.split(':').first.delete("^0-9").to_i
+      @rounds = []
+      data.split(':')[1].split(';').each do |round|
+        init_values = round.split(',')
+        red, green, blue = 0
+        init_values.each do |value|
+          red = value.delete("^0-9").to_i if value.include?(RED)
+          green = value.delete("^0-9").to_i if value.include?(GREEN)
+          blue = value.delete("^0-9").to_i if value.include?(BLUE)
+        end
+        rounds << Round.new(red: red, green: green, blue: blue)
+      end
+    end
+
+    def valid?
+      rounds.all?{|round| round.valid_round?}
+    end
+
+    def largest_red
+      rounds.select{|round| round.red.present?}.max{ |a, b| a.red <=> b.red}.red
+    end
+
+    def largest_green
+      rounds.select{|round| round.green.present?}.max{ |a, b| a.green <=> b.green}.green
+    end
+
+    def largest_blue
+      rounds.select{|round| round.blue.present?}.max{ |a, b| a.blue <=> b.blue}.blue
+    end
+
+    def power
+      largest_red * largest_green * largest_blue
     end
   end
 
@@ -36,47 +79,4 @@ class ValidateGames
     end
   end
 
-  def number_valid
-    id_sum = 0
-    games_input.each do |game|
-      this_game = Game.new(data: game)
-      rounds = game.split(':')[1].split(';')
-      valid_game = true
-      rounds.each do |round|
-        init_values = round.split(',')
-        red, green, blue = 0
-        init_values.each do |value|
-          red = value.delete("^0-9") if value.include?(RED)
-          green = value.delete("^0-9") if value.include?(GREEN)
-          blue = value.delete("^0-9") if value.include?(BLUE)
-        end
-        valid_game = false unless Round.new(red: red, green: green, blue: blue).valid_round?
-      end
-      id_sum += this_game.game_id if valid_game
-    end
-    id_sum
-  end
-
-  def power_sum
-    power_sum = 0
-    games_input.each do |game|
-      this_game = Game.new(data: game)
-      rounds = game.split(':')[1].split(';')
-      red_seen, green_seen, blue_seen, power = 0,0,0,0
-      rounds.each do |round|
-        init_values = round.split(',')
-        red, green, blue = 0,0,0
-        init_values.each do |value|
-          red = value.delete("^0-9").to_i if value.include?(RED)
-          green = value.delete("^0-9").to_i if value.include?(GREEN)
-          blue = value.delete("^0-9").to_i if value.include?(BLUE)
-          red_seen = red if red.present? && red_seen < red
-          green_seen = green if green.present? && green_seen < green
-          blue_seen = blue if blue.present? && blue_seen < blue
-        end
-      end
-      power_sum += (red_seen * green_seen * blue_seen)
-    end
-    power_sum
-  end
 end
