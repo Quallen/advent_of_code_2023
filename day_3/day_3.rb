@@ -1,7 +1,7 @@
 require 'active_support/all'
 
 class Schematic
-  attr_accessor :schematic, :array_2d, :symbol_coordinates, :part_numbers, :digit_regex, :length
+  attr_accessor :schematic, :array_2d, :symbol_coordinates, :part_numbers, :digit_regex, :length, :gears
 
   def initialize
     @schematic = File.read('day_3_input.txt').lines.map(&:chomp)
@@ -9,6 +9,7 @@ class Schematic
     @length = 140
     @symbol_coordinates = []
     @part_numbers = []
+    @gears = []
     @digit_regex = /[\d]/
     schematic.each_with_index do | line, row_index |
       line.each_char.with_index do |character, column_index|
@@ -18,6 +19,7 @@ class Schematic
     pad_array_bottom
     get_symbol_coordinates
     get_parts
+    get_gears
   end
 
   def pad_array_bottom
@@ -28,6 +30,10 @@ class Schematic
 
   def sum_part_numbers
     part_numbers.flatten.reduce(:+)
+  end
+
+  def sum_gear_ratios
+    gears.flatten.reduce(:+)
   end
 
   def find_part_number(x:, y:)
@@ -48,6 +54,28 @@ class Schematic
   def get_parts
     symbol_coordinates.each do |coordinate|
       scan_for_parts(x: coordinate[0], y: coordinate[1])
+    end
+  end
+
+  def get_gears
+    symbol_coordinates.each do |coordinate|
+      scan_for_gears(x: coordinate[0], y: coordinate[1])
+    end
+  end
+
+  def scan_for_gears(x: , y:)
+    gear_ratio_buffer = []
+    gear_ratio_buffer << find_part_number(x: x, y: y-1) if array_2d[x][y-1].present? && array_2d[x][y-1].match?(digit_regex)
+    gear_ratio_buffer << find_part_number(x: x, y: y+1) if array_2d[x][y+1].present? && array_2d[x][y+1].match?(digit_regex)
+    gear_ratio_buffer << find_part_number(x: x-1, y: y) if array_2d[x-1][y].present? && array_2d[x-1][y].match?(digit_regex)
+    gear_ratio_buffer << find_part_number(x: x-1, y: y-1) if array_2d[x-1][y-1].present? && array_2d[x-1][y-1].match?(digit_regex)
+    gear_ratio_buffer << find_part_number(x: x-1, y: y+1) if array_2d[x-1][y+1].present? && array_2d[x-1][y+1].match?(digit_regex)
+    gear_ratio_buffer << find_part_number(x: x+1, y: y) if array_2d[x+1][y].present? && array_2d[x+1][y].match?(digit_regex)
+    gear_ratio_buffer << find_part_number(x: x+1, y: y-1) if array_2d[x+1][y-1].present? && array_2d[x+1][y-1].match?(digit_regex)
+    gear_ratio_buffer << find_part_number(x: x+1, y: y+1) if array_2d[x+1][y+1].present? && array_2d[x+1][y+1].match?(digit_regex)
+    gear_ratio_buffer = gear_ratio_buffer.uniq.map(&:to_i)
+    if gear_ratio_buffer.count == 2
+      gears << (gear_ratio_buffer.first * gear_ratio_buffer.last)
     end
   end
 
