@@ -5,7 +5,9 @@ class Farmville
   attr_accessor :input, :seeds, :seed_locations, :seed_to_soil_map, :soil_to_fertilizer_map, :fertilizer_to_water_map, :water_to_light_map, :light_to_temperature_map, :temperature_to_humidity_map, :humidity_to_location_map
 
   def initialize
-    @input = File.read('day_5_input.txt').lines.map(&:chomp)
+    raise ArgumentError.new "must pass in input file name" unless ARGV[0].present?
+    raise ArgumentError.new "File not found" unless File.exist?(ARGV[0])
+    @input = File.read(ARGV[0]).lines.map(&:chomp)
     input_seeds = input.first.split(':').last.strip.split(' ')
     @seeds = Array.new(input_seeds).map(&:to_i)
     map_strings = ['seed-to-soil map:', 'soil-to-fertilizer map:', 'fertilizer-to-water map:', 'water-to-light map:', 'light-to-temperature map:', 'temperature-to-humidity map:', 'humidity-to-location map:']
