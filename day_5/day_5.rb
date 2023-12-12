@@ -2,7 +2,7 @@ require 'active_support/all'
 require 'pry-byebug'
 
 class Farmville
-  attr_accessor :input, :seeds, :seed_locations, :seed_to_soil_map, :soil_to_fertilizer_map, :fertilizer_to_water_map, :water_to_light_map, :light_to_temperature_map, :temperature_to_humidity_map, :humidity_to_location_map
+  attr_accessor :input, :seeds, :seed_locations, :seed_to_soil_map, :soil_to_fertilizer_map, :fertilizer_to_water_map, :water_to_light_map, :light_to_temperature_map, :temperature_to_humidity_map, :humidity_to_location_map, :seed_ranges
 
   def initialize
     raise ArgumentError.new "must pass in input file name" unless ARGV[0].present?
@@ -16,11 +16,26 @@ class Farmville
       instance_variable_set("@#{ivar}", build_map(map_string: map))
     end
     @seed_locations = {}
-    find_seed_locations
+    @seed_ranges = []
   end
 
   def minimum_location
+    find_seed_locations
     puts "Part 1 answer: #{seed_locations.values.min}"
+  end
+
+  def init_seeds_from_ranges
+    seeds.each_slice(2).to_a.each do |range|
+      start_range = range.first
+      end_range = start_range + range.second
+      seed_ranges.append(start_range...end_range)
+    end
+  end
+
+  def walk_it_back
+    init_seeds_from_ranges
+    lowest_seed_location = moonwalk_locations
+    puts "Part 2 answer: #{lowest_seed_location}"
   end
 
   def find_seed_locations
@@ -36,6 +51,19 @@ class Farmville
     end
   end
 
+ def moonwalk_locations
+   (1..seeds.max).each do |location|
+     humidity = moonwalk(value: location, map: humidity_to_location_map)
+     temperature = moonwalk(value: humidity,map: temperature_to_humidity_map)
+     light = moonwalk(value: temperature, map: light_to_temperature_map)
+     water = moonwalk(value: light, map: water_to_light_map)
+     fertilizer = moonwalk(value: water, map: fertilizer_to_water_map)
+     soil = moonwalk(value: fertilizer, map: soil_to_fertilizer_map)
+     seed = moonwalk(value: soil, map: seed_to_soil_map)
+     return location if seed_ranges.any?{ |range| range.include?(seed)}
+   end
+ end
+
   def find_next(value: , map: )
     range = map.keys.select{|range| range.include?(value)}.first
     return value if range.nil?
@@ -43,6 +71,16 @@ class Farmville
     destination = map[range]
     offset = value - source
     destination + offset
+  end
+
+  def moonwalk(value: , map:)
+    end_range = map.values.select{|range| range.include?(value)}.first
+    start_range = map.key(end_range)
+    return value if end_range.nil?
+    source = start_range.first
+    destination = end_range.first
+    offset = value - destination
+    source + offset
   end
 
   def build_map(map_string: )
@@ -71,10 +109,10 @@ class Farmville
       source = data.second.to_i
       destination = data.first.to_i
       range = data.last.to_i
-      hash[source...source+range] = destination
+      hash[source...source+range] = destination...destination+range
     end
     hash
   end
 end
 
-Farmville.new.minimum_location
+Farmville.new.walk_it_back
