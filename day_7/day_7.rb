@@ -1,5 +1,5 @@
 require 'active_support/all'
-require 'pry-byebug'
+require 'rspec'
 
 class CamelCards
   attr_accessor :input, :hands, :sorted_hands, :bucket_keys
@@ -50,20 +50,8 @@ class CamelCards
     end
 
     hands.each do |hand|
-      if hand.five_of_a_kind?
-        sorted_hands[:five_of_a_kind] << hand
-      elsif hand.four_of_a_kind?
-        sorted_hands[:four_of_a_kind] << hand
-      elsif hand.full_house?
-        sorted_hands[:full_house] << hand
-      elsif hand.three_of_a_kind?
-        sorted_hands[:three_of_a_kind] << hand
-      elsif hand.two_pair?
-        sorted_hands[:two_pair] << hand
-      elsif hand.one_pair?
-        sorted_hands[:one_pair] << hand
-      elsif hand.high_card?
-        sorted_hands[:high_card] << hand
+      bucket_keys.each do |key|
+        sorted_hands[key] << hand and break if hand.send("#{key.to_s}?")
       end
     end
   end
@@ -71,7 +59,7 @@ class CamelCards
   class Hand
     attr_accessor :cards, :card_strengths, :card_values, :rank, :bid
     def initialize(cards_string: , bid:)
-      @card_values = %w(A K Q J T 9 8 7 6 5 4 3 2)
+      @card_values = %w(A K Q T 9 8 7 6 5 4 3 2 J)
       @card_strengths = card_strengths_hash
       @cards = build_cards(cards_string: cards_string)
       @bid = bid.to_i
@@ -95,56 +83,71 @@ class CamelCards
     end
 
     def five_of_a_kind?
+      joker_count = cards.select{|card| card.text == 'J'}.count
+      target = 5 - joker_count
       card_values.each do |value|
-        return true if cards.all?{|card| card.text == value}
+        return true if cards.select{|card| card.text == value}.count == target
       end
       false
     end
 
     def four_of_a_kind?
+      joker_count = cards.select{|card| card.text == 'J'}.count
+      target = 4 - joker_count
       card_values.each do |value|
-        return true if cards.select{|card| card.text == value}.count == 4
+        return true if cards.reject{|card| card.text == 'J'}.select{|card| card.text == value}.count == target
       end
       false
     end
 
     def full_house?
-      three_cards = nil
-      two_cards = nil
-      card_values.each do |value|
-        three_cards = value if cards.select{|card| card.text == value}.count == 3
-        two_cards = value if cards.select{|card| card.text == value}.count == 2
+      joker_count = cards.select{|card| card.text == 'J'}.count
+      target = 3 - joker_count
+      card_values.reject{|value| value == 'J'}.each do |value|
+        two_cards, three_cards = nil, nil
+        three_cards = value if cards.reject{|card| card.text == 'J'}.select{|card| card.text == value}.count == target
+        if three_cards
+          card_values.each do |c_val|
+            two_cards = c_val if ( cards.reject{|card| card.text == three_cards || card.text == 'J'}.select{|card| card.text == c_val}.count == 2 )
+          end
+        end
         return true if three_cards && two_cards
       end
       false
     end
 
     def three_of_a_kind?
+      joker_count = cards.select{|card| card.text == 'J'}.count
+      target = 3 - joker_count
       card_values.each do |value|
-        return true if cards.select{|card| card.text == value}.count == 3
+        return true if cards.select{|card| card.text == value}.count == target
       end
       false
     end
 
     def two_pair?
-      first_pair = nil
-      second_pair = nil
-      card_values.each do |value|
-        first_pair = value if cards.select{|card| card.text == value}.count == 2
+      # at this point joker hands only have a single joker and there are no pairs because pairs + joker moved up already
+      joker_count = cards.select{|card| card.text == 'J'}.count
+      target = 2 - joker_count
+      first_pair, second_pair = nil, nil
+
+      card_values.reject{|value| value == 'J'}.each do |value|
+        first_pair = value if cards.select{|card| card.text == value}.count == target
         if first_pair
           card_values.each do |c_val|
-            second_pair = c_val if ( cards.reject{|card| card.text == first_pair}.select{|card| card.text == c_val}.count == 2 )
+            second_pair = c_val if ( cards.reject{|card| card.text == first_pair}.select{|card| card.text == c_val}.count == 2 ) && first_pair != second_pair
           end
         end
-
         return true if first_pair && second_pair
       end
       false
     end
 
     def one_pair?
+      joker_count = cards.select{|card| card.text == 'J'}.count
+      target = 2 - joker_count
       card_values.each do |value|
-        return true if cards.select{|card| card.text == value}.count == 2
+        return true if cards.select{|card| card.text == value}.count == target
       end
       false
     end
