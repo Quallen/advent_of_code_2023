@@ -19,6 +19,10 @@ class Report
     puts locations.map{ |location| location.extrapolate_next}.reduce(:+)
   end
 
+  def output_backwards_sum
+    puts locations.map{|location| location.extrapolate_previous}.reduce(:+)
+  end
+
   class Location
     attr_accessor :history, :steps, :increment
     def initialize(history: )
@@ -54,7 +58,19 @@ class Report
       end
       return @steps.first.last
     end
+
+    def extrapolate_previous
+      old_to_new = @steps.reverse
+      old_to_new.each_with_index do |array, index|
+        break if index + 1 > old_to_new.count
+        old_to_new[index].prepend(array.first) and next if array.uniq.count <= 1
+        new_value = old_to_new[index].first - old_to_new[index-1].first
+        old_to_new[index].prepend(new_value)
+      end
+      return @steps.first.first
+    end
   end
 end
-
-Report.new.output_sum
+report = Report.new
+report.output_sum
+report.output_backwards_sum
