@@ -3,34 +3,37 @@ require 'active_support/all'
 require 'pry-byebug'
 
 class Maze
-  attr_accessor :input, :size, :locations_2d, :starting_location, :loop, :current_location, :loop_length
+  attr_accessor :input, :size, :locations_2d, :starting_location, :loop, :current_location, :loop_length, :loop_locations, :enclosed_locations
   def initialize
     @input = File.read('day_10_input.txt').lines.map(&:chomp)
     @size = input.first.length
     @locations_2d = Array.new(size){Array.new(size)}
+    @starting_location = nil
     init_locations
-    @starting_location = find_start_location
     build_connections
     get_starting_connections
     @loop_length = walk_loop
+    @loop_locations = []
+    @enclosed_locations = []
+    get_loop_locations
+    visualize_loop
+    find_enclosed_locations
+    visualize_enclosed_locations
   end
 
   def farthest_point
     puts (BigDecimal(loop_length) / BigDecimal(2)).round
   end
 
+  def print_enclosed_locations_count
+    puts enclosed_locations.count
+  end
+
   def init_locations
     input.each_with_index do |line, row_index|
       line.each_char.with_index  do |character, column_index|
         locations_2d[row_index][column_index] = Location.new(type: character, position: [row_index,column_index])
-      end
-    end
-  end
-
-  def find_start_location
-    input.each_with_index do |line, row_index|
-      line.each_char.with_index  do |character, column_index|
-        return locations_2d[row_index][column_index] if locations_2d[row_index][column_index].start?
+        @starting_location = locations_2d[row_index][column_index] if locations_2d[row_index][column_index].start?
       end
     end
   end
@@ -76,6 +79,53 @@ class Maze
       current_location.walked = true
     end
     return steps
+  end
+
+  def get_loop_locations
+    input.each_with_index do |line, row_index|
+      line.each_char.with_index  do |character, column_index|
+        cell = locations_2d[row_index][column_index]
+        loop_locations << cell if cell.walked? && !loop_locations.include?(cell)
+      end
+    end
+  end
+
+  def visualize_loop
+    input.each_with_index do |line, x|
+      row_string = ''
+      line.each_char.with_index  do |character, y|
+        cell = locations_2d[x][y]
+        row_string << 'X' if cell&.walked?
+        row_string << '.' if cell&.not_walked?
+      end
+      puts row_string
+    end
+  end
+
+  def visualize_enclosed_locations
+    puts "="*size
+    input.each_with_index do |line, x|
+      row_string = ''
+      line.each_char.with_index  do |character, y|
+        cell = locations_2d[x][y]
+        row_string << '.' if cell.nil? || !enclosed_locations.include?(cell)
+        row_string << 'X' if enclosed_locations.include?(cell)
+      end
+      puts row_string
+    end
+  end
+
+  def find_enclosed_locations
+    flip_flag_types = ['|', 'F', '7']
+    input.each_with_index do |line, x|
+      inside_flag = false
+      line.each_char.with_index  do |character, y|
+        cell = locations_2d[x][y]
+        next if cell.nil?
+        inside_flag = !inside_flag if flip_flag_types.include?(cell.type) && loop_locations.include?(cell)
+        enclosed_locations << cell if cell.not_walked? && inside_flag
+      end
+    end
   end
 
   class Location
@@ -125,4 +175,6 @@ class Maze
   end
 end
 
-Maze.new.farthest_point
+maze = Maze.new
+maze.farthest_point
+maze.print_enclosed_locations_count
