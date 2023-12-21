@@ -2,7 +2,7 @@ require 'active_support/all'
 require 'pry-byebug'
 
 class Universe
-  attr_accessor :input, :observation_2d, :map, :observation_size, :map_size, :x_size, :y_size, :galaxies, :galaxy_pair_distances_hash
+  attr_accessor :input, :observation_2d, :map, :observation_size, :map_size, :x_size, :y_size, :galaxies, :galaxy_pair_distances_hash, :expansion_factor
   def initialize
     @input = File.read('day_11_input.txt').lines.map(&:chomp)
     @observation_size = input.first.length
@@ -11,9 +11,10 @@ class Universe
     @y_size = 0
     @x_size = 0
     @map = nil
+    @expansion_factor = 999999
     expand_observation_map
     set_map_from_expanded
-    visualize_map
+    #visualize_map
     @galaxies = []
     get_galaxies
     @galaxy_pair_distances_hash = Hash.new.with_indifferent_access
@@ -55,7 +56,11 @@ class Universe
     transposed_map = observation_2d.transpose
 
     transposed_map.each_with_index do |column, column_index|
-      columns_to_insert << column_index if column.all?{|location| location.empty_space? }
+      if column.all?{|location| location.empty_space? }
+        expansion_factor.times do |e|
+          columns_to_insert << column_index
+        end
+      end
     end
 
     columns_to_insert.each_with_index do |column, index|
@@ -70,17 +75,24 @@ class Universe
   def expand_rows
     rows_to_insert = []
     @observation_2d.each_with_index do |row, row_index|
-      rows_to_insert << row_index if row.all?{|location| location.empty_space?}
+      if row.all?{|location| location.empty_space?}
+        expansion_factor.times do |e|
+          rows_to_insert << row_index
+        end
+      end
     end
+
     rows_to_insert.each_with_index do |r, index|
       observation_2d.insert(r+index, Array.new(y_size))
     end
+
     @observation_2d.each_with_index do |row, row_index|
       row.each_with_index do |column, column_index|
         location = observation_2d[row_index][column_index]
         @observation_2d[row_index][column_index] = Location.new(type: ".", coords: [0,0]) if location.nil?
       end
     end
+
     @x_size = observation_2d.size
   end
 
